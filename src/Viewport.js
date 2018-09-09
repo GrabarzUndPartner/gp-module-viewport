@@ -1,7 +1,7 @@
-"use strict";
+'use strict';
 
 import Vector from 'gp-module-base/Vector';
-import Bounds from'gp-module-base/Bounds';
+import Bounds from 'gp-module-base/Bounds';
 import Enum from 'enum';
 import Modernizr from 'modernizr-loader!modernizr';
 
@@ -59,8 +59,8 @@ var Viewport = function(frameNode, contentNode) {
         this.scrollKeyName.y = 'scrollTop';
     }
 
-    global.addEventListener('resize', global.animationFrame.throttle(onMeasure.bind(this), onResize.bind(this)), Modernizr.passiveeventlisteners ? {passive: true} : false);
-    this.frameNode.addEventListener('scroll', global.animationFrame.throttle(onMeasure.bind(this), onScroll.bind(this)), Modernizr.passiveeventlisteners ? {passive: true} : false);
+    global.addEventListener('resize', global.animationFrame.throttle(onMeasure.bind(this), onResize.bind(this)), Modernizr.passiveeventlisteners ? { passive: true } : false);
+    this.frameNode.addEventListener('scroll', global.animationFrame.throttle(onMeasure.bind(this), onScroll.bind(this)), Modernizr.passiveeventlisteners ? { passive: true } : false);
 
     global.picture.ready(onImageLoad.bind(this));
 };
@@ -108,7 +108,7 @@ Viewport.prototype.on = function(name, fn) {
 
 Viewport.prototype.off = function(name, fn) {
     this.callbacks[name] = this.callbacks[name].reduce(function(result, callback) {
-        if(callback !== fn) {
+        if (callback !== fn) {
             result.push(callback);
         }
         return result;
@@ -116,20 +116,34 @@ Viewport.prototype.off = function(name, fn) {
     return this;
 };
 
+Viewport.prototype.forceInit = function() {
+    if (!this.init) {
+        onMeasure.bind(this)({
+            stopImmediatePropagation: function() {},
+            stopPropagation: function() {}
+        });
+        onInit.bind(this)();
+    }
+};
+
 export default Viewport;
 
 function onImageLoad() {
-    onMeasure.bind(this)({
-        stopImmediatePropagation: function() {},
-        stopPropagation: function() {}
-    });
-    global.animationFrame.addOnce(onInit.bind(this));
+    if (!this.init) {
+        onMeasure.bind(this)({
+            stopImmediatePropagation: function() {},
+            stopPropagation: function() {}
+        });
+        global.animationFrame.addOnce(onInit.bind(this));
+    }
 }
 
 function onInit() {
-    this.scrollDirection.resetValues(0, 0, 0);
-    update(triggerUpdate.bind(this, this.EVENT_TYPES.INIT), this.bounds, this.scrollPosition, this.offset, this.dimension);
-    this.init = true;
+    if (!this.init) {
+        this.init = true;
+        this.scrollDirection.resetValues(0, 0, 0);
+        update(triggerUpdate.bind(this, this.EVENT_TYPES.INIT), this.bounds, this.scrollPosition, this.offset, this.dimension);
+    }
 }
 
 function onResize() {
@@ -169,7 +183,7 @@ function triggerScroll() {
 
 function triggerUpdate(eventType) {
     for (var i = 0, l = this.callbacks[eventType].length; i < l; i++) {
-        (this.callbacks[eventType][i])(this.bounds, this.scrollDirection);
+        this.callbacks[eventType][i](this.bounds, this.scrollDirection);
     }
 }
 
@@ -199,7 +213,10 @@ function updateDimension(dimension, frame, dimensionKeyName) {
 }
 
 function updateScrollDirection(direction, position) {
-    direction.subtractLocal(position).multiplyValueLocal(-1).signLocal();
+    direction
+        .subtractLocal(position)
+        .multiplyValueLocal(-1)
+        .signLocal();
 }
 
 function updateScrollDimension(content, dimension) {
